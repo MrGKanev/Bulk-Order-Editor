@@ -11,9 +11,23 @@ jQuery(document).ready(function($) {
         var orderDate = $('#order_date').val();
         var actionerId = $('#actioner_id').val();
 
-        $('#log-list').empty();
+        if (orderIds[0].trim() === '') {
+            alert('Please enter at least one order ID.');
+            return; // Stop execution if no IDs are provided.
+        }
+
+        $('#log-list').empty(); // Clear existing logs before starting new submissions.
+
+        var completedRequests = 0;
+        var totalRequests = orderIds.length;
+        var errorsEncountered = false;
+
         orderIds.forEach(function(orderId) {
             orderId = orderId.trim();
+            if (!orderId) {
+                completedRequests++; // Skip empty entries and count them as 'processed'.
+                return;
+            }
             $.ajax({
                 url: bulkOrderEditor.ajax_url,
                 type: 'POST',
@@ -30,18 +44,26 @@ jQuery(document).ready(function($) {
                     actioner_id: actionerId
                 },
                 success: function(response) {
-                    var logList = $('#log-list');
                     if (response.success) {
                         response.data.log_entries.forEach(function(log) {
-                            logList.append('<li>' + log + '</li>');
+                            $('#log-list').append('<li>' + log + '</li>');
                         });
-                        $('#response-message').html('<div class="notice notice-success"><p>Order #' + orderId + ' updated successfully.</p></div>');
                     } else {
-                        $('#response-message').html('<div class="notice notice-error"><p>' + response.data.message + '</p></div>');
+                        $('#log-list').append('<li>Error with order #' + orderId + ': ' + response.data.message + '</li>');
+                        errorsEncountered = true;
                     }
                 },
-                error: function() {
-                    $('#response-message').html('<div class="notice notice-error"><p>An error occurred with order #' + orderId + '.</p></div>');
+                error: function(xhr, status, error) {
+                    $('#log-list').append('<li>Request failed for order #' + orderId + ': ' + error + '</li>');
+                    errorsEncountered = true;
+                },
+                complete: function() {
+                    completedRequests++;
+                    if (completedRequests === totalRequests) {
+                        var messageClass = errorsEncountered ? 'notice-error' : 'notice-success';
+                        var messageText = errorsEncountered ? 'Completed with errors. See log for details.' : 'All orders have been processed successfully.';
+                        $('#response-message').html('<div class="notice ' + messageClass + '"><p>' + messageText + '</p></div>');
+                    }
                 }
             });
         });
