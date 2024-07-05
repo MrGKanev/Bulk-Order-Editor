@@ -6,6 +6,10 @@ jQuery(document).ready(function($) {
         var orderStatus = $('#order_status').val();
         var orderTotal = $('#order_total').val();
         var customerNote = $('#customer_note').val();
+        var noteType = $('#note_type').val();
+        var customerId = $('#customer_id').val();
+        var orderDate = $('#order_date').val();
+        var actionerId = $('#actioner_id').val();
 
         $('#log-list').empty();
         orderIds.forEach(function(orderId) {
@@ -19,7 +23,11 @@ jQuery(document).ready(function($) {
                     order_id: orderId,
                     order_status: orderStatus,
                     order_total: orderTotal,
-                    customer_note: customerNote
+                    customer_note: customerNote,
+                    note_type: noteType,
+                    customer_id: customerId,
+                    order_date: orderDate,
+                    actioner_id: actionerId
                 },
                 success: function(response) {
                     var logList = $('#log-list');
