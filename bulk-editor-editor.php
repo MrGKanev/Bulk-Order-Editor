@@ -60,13 +60,22 @@ function order_status_changer_page_content()
         <form id="order-status-form">
             <label for="order_ids">Order IDs (comma-separated):</label>
             <input type="text" id="order_ids" name="order_ids" required>
+
             <label for="order_status">Order Status:</label>
-            <select id="order_status" name="order_status" required>
+            <select id="order_status" name="order_status">
+                <option value="">Select status</option>
                 <?php foreach ($order_statuses as $status_key => $status_label) : ?>
                     <option value="<?php echo esc_attr($status_key); ?>"><?php echo esc_html($status_label); ?></option>
                 <?php endforeach; ?>
             </select>
-            <input type="submit" value="Update Order Status">
+
+            <label for="order_total">Order Total:</label>
+            <input type="number" step="0.01" id="order_total" name="order_total">
+
+            <label for="customer_note">Customer Note:</label>
+            <textarea id="customer_note" name="customer_note"></textarea>
+
+            <input type="submit" value="Update Orders">
         </form>
         <div id="status-log">
             <h2>Update Log</h2>
@@ -78,87 +87,44 @@ function order_status_changer_page_content()
 <?php
 }
 
-// Handle AJAX request
-add_action('wp_ajax_update_order_status', 'handle_update_order_status_ajax');
+// Handle AJAX request for individual order updates
+add_action('wp_ajax_update_single_order', 'handle_update_single_order_ajax');
 
-function handle_update_order_status_ajax()
+function handle_update_single_order_ajax()
 {
     check_ajax_referer('bulk_order_editor_nonce', 'nonce');
 
-    if (isset($_POST['order_ids']) && isset($_POST['order_status'])) {
-        $order_ids = explode(',', sanitize_text_field($_POST['order_ids']));
-        $order_status = sanitize_text_field($_POST['order_status']);
-        $log_entries = [];
-        $success = true;
+    if (isset($_POST['order_id'])) {
+        $order_id = intval(sanitize_text_field($_POST['order_id']));
+        $order_status = isset($_POST['order_status']) ? sanitize_text_field($_POST['order_status']) : '';
+        $order_total = isset($_POST['order_total']) ? floatval($_POST['order_total']) : '';
+        $customer_note = isset($_POST['customer_note']) ? sanitize_textarea_field($_POST['customer_note']) : '';
 
-        foreach ($order_ids as $order_id) {
-            $order_id = intval(trim($order_id));
-            if ($order_id) {
-                $order = wc_get_order($order_id);
-                if ($order) {
-                    $order->update_status($order_status);
-
-                    $log_entry = sprintf('Order #%d status changed to %s', $order_id, wc_get_order_status_name($order_status));
-                    $log_entries[] = $log_entry;
-                } else {
-                    $log_entries[] = sprintf('Order #%d not found', $order_id);
-                    $success = false;
-                }
-            } else {
-                $log_entries[] = sprintf('Invalid Order ID: %d', $order_id);
-                $success = false;
+        $order = wc_get_order($order_id);
+        if ($order) {
+            $log_entries = [];
+            if ($order_status) {
+                $order->update_status($order_status);
+                $log_entries[] = sprintf('Order #%d status changed to %s', $order_id, wc_get_order_status_name($order_status));
             }
-        }
+            if ($order_total) {
+                $order->set_total($order_total);
+                $log_entries[] = sprintf('Order #%d total changed to %.2f', $order_id, $order_total);
+            }
+            if ($customer_note) {
+                $order->set_customer_note($customer_note);
+                $log_entries[] = sprintf('Order #%d customer note updated', $order_id);
+            }
+            $order->save();
 
-        wp_send_json_success(array(
-            'log_entries' => $log_entries,
-            'status'      => $success ? 'success' : 'error'
-        ));
+            wp_send_json_success(array(
+                'log_entries' => $log_entries,
+                'status'      => 'success'
+            ));
+        } else {
+            wp_send_json_error(array('message' => sprintf('Order #%d not found', $order_id)));
+        }
     } else {
-        wp_send_json_error(array('message' => 'Invalid input.'));
+        wp_send_json_error(array('message' => 'Invalid order ID.'));
     }
 }
-
-?>
-
-// JavaScript file: bulk-order-editor.js
-jQuery(document).ready(function($) {
-$('#order-status-form').on('submit', function(event) {
-event.preventDefault();
-
-var orderIds = $('#order_ids').val();
-var orderStatus = $('#order_status').val();
-
-$.ajax({
-url: bulkOrderEditor.ajax_url,
-type: 'POST',
-data: {
-action: 'update_order_status',
-nonce: bulkOrderEditor.nonce,
-order_ids: orderIds,
-order_status: orderStatus
-},
-success: function(response) {
-if (response.success) {
-var logList = $('#log-list');
-logList.empty();
-response.data.log_entries.forEach(function(log) {
-logList.append('<li>' + log + '</li>');
-});
-$('#response-message').html('<div class="notice notice-success">
-    <p>Order status updated successfully.</p>
-</div>');
-} else {
-$('#response-message').html('<div class="notice notice-error">
-    <p>Failed to update order status.</p>
-</div>');
-}
-},
-error: function() {
-$('#response-message').html('<div class="notice notice-error">
-    <p>An error occurred.</p>
-</div>');
-}
-});
-});
-});
