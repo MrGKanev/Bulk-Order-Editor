@@ -1,0 +1,45 @@
+.wrap .content-area {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    /* Allocates 3/4th of the space for the form and 1/4th for the log */
+    column-gap: 20px;
+    /* Adds space between the form and log sections */
+}
+
+.wrap .form-area,
+.wrap .log-area {
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    /* Gives a subtle border around the form and log areas */
+    background-color: #fff;
+    /* Optional: sets a background color for better readability */
+}
+
+.wrap .form-group {
+    margin-bottom: 20px;
+    /* Provides spacing between form fields */
+}
+
+.wrap input[type="text"],
+.wrap input[type="number"],
+.wrap select,
+.wrap textarea {
+    width: 100%;
+    padding: 10px;
+}
+
+.wrap input[type="submit"] {
+    display: block;
+    width: auto;
+    padding: 10px 15px;
+    margin-top: 10px;
+    /* Adds a top margin to the submit button */
+}
+
+@media screen and (max-width: 800px) {
+    .wrap .content-area {
+        grid-template-columns: 1fr;
+        /* Stacks the form and log area on smaller screens */
+    }
+}
