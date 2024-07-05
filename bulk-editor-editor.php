@@ -50,7 +50,7 @@ function register_custom_woocommerce_menu_page()
         'Bulk Order Editor', // Menu title
         'manage_woocommerce', // Capability
         'order-status-changer', // Menu slug
-        'order_status_changer_page_content' // Callback function
+        'order_status_editor_page_content' // Callback function
     );
 }
 
@@ -61,13 +61,13 @@ function get_woocommerce_order_statuses()
 }
 
 // Display the custom admin page content
-function order_status_changer_page_content()
+function order_status_editor_page_content()
 {
     $order_statuses = get_woocommerce_order_statuses();
     $users = get_users(array('fields' => array('ID', 'display_name')));
 ?>
     <div class="wrap">
-        <h1>Bulk Order Changer</h1>
+        <h1>Bulk Order Editor</h1>
         <div id="response-message"></div>
         <form id="order-status-form">
             <h2>Order Details</h2>
