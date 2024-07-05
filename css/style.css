@@ -1,49 +1,45 @@
 .wrap .content-area {
-    display: flex;
-    justify-content: space-between;
-    padding: 20px;
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    /* Allocates 3/4th of the space for the form and 1/4th for the log */
+    column-gap: 20px;
+    /* Adds space between the form and log sections */
 }
 
-.wrap .form-area {
-    flex: 0 0 70%;
-}
-
+.wrap .form-area,
 .wrap .log-area {
-    flex: 0 0 28%;
-    /* Adjusts for some padding between sections */
-    padding-left: 20px;
-    border-left: 1px solid #ccc;
-    min-height: 300px;
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    /* Gives a subtle border around the form and log areas */
+    background-color: #fff;
+    /* Optional: sets a background color for better readability */
 }
 
 .wrap .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
+    /* Provides spacing between form fields */
 }
 
 .wrap input[type="text"],
 .wrap input[type="number"],
-.wrap input[type="date"],
 .wrap select,
 .wrap textarea {
     width: 100%;
-    padding: 8px;
+    padding: 10px;
 }
 
-.wrap select,
 .wrap input[type="submit"] {
     display: block;
+    width: auto;
     padding: 10px 15px;
+    margin-top: 10px;
+    /* Adds a top margin to the submit button */
 }
 
-@media screen and (max-width: 960px) {
+@media screen and (max-width: 800px) {
     .wrap .content-area {
-        flex-direction: column;
-    }
-
-    .wrap .form-area,
-    .wrap .log-area {
-        flex: 0 0 100%;
-        padding-left: 0;
-        border-left: none;
+        grid-template-columns: 1fr;
+        /* Stacks the form and log area on smaller screens */
     }
 }
