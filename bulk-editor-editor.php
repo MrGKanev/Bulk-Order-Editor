@@ -160,34 +160,34 @@ function handle_update_single_order_ajax()
         if ($order) {
             $log_entries = [];
 
-            // Log customer ID change
             if ($customer_id && $order->get_customer_id() !== $customer_id) {
                 $order->set_customer_id($customer_id);
                 $log_entries[] = sprintf('Order #%d customer ID changed to %d', $order_id, $customer_id);
             }
 
-            // Log order status change
             if ($order_status && $order->get_status() !== $order_status) {
                 $order->update_status($order_status);
                 $log_entries[] = sprintf('Order #%d status changed to %s', $order_id, wc_get_order_status_name($order_status));
             }
 
-            // Log order total change
             if ($order_total && $order->get_total() != $order_total) {
                 $order->set_total($order_total);
                 $log_entries[] = sprintf('Order #%d total changed to %.2f', $order_id, $order_total);
             }
 
-            // Log customer note addition
             if (!empty($customer_note)) {
-                $note = $order->add_order_note($customer_note, $note_type === 'customer');
-                $log_entries[] = sprintf('Order #%d note added: %s', $order_id, $note->id);
+                $note_id = $order->add_order_note($customer_note, $note_type === 'customer');
+                $log_entries[] = sprintf('Order #%d note added (ID: %s): "%s"', $order_id, $note_id, $customer_note);
             }
 
-            // Log order date change
             if ($order_date && $order->get_date_created()->format('Y-m-d') !== $order_date) {
                 $order->set_date_created($order_date);
                 $log_entries[] = sprintf('Order #%d date of creation set to %s', $order_id, $order_date);
+            }
+
+            // Add separator line after all changes for this order
+            if (!empty($log_entries)) {
+                $log_entries[] = "--------------------------------";
             }
 
             $order->save();
