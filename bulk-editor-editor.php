@@ -131,6 +131,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
             <div class="log-area">
                 <h2>Update Log</h2>
+                <p id="update-progress" style="display:none;">Progress: <span id="progress-percentage">0%</span></p>
                 <ul id="log-list">
                     <li>No log entries found.</li>
                 </ul>

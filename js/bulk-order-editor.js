@@ -17,6 +17,8 @@ jQuery(document).ready(function($) {
         }
 
         $('#log-list').empty(); // Clear existing logs before starting new submissions.
+        $('#progress-percentage').text('0%'); // Reset progress percentage.
+        $('#update-progress').show(); // Show the progress text
 
         var completedRequests = 0;
         var totalRequests = orderIds.length;
@@ -26,6 +28,7 @@ jQuery(document).ready(function($) {
             orderId = orderId.trim();
             if (!orderId) {
                 completedRequests++; // Skip empty entries and count them as 'processed'.
+                updateProgress(completedRequests, totalRequests);
                 return;
             }
             $.ajax({
@@ -59,6 +62,7 @@ jQuery(document).ready(function($) {
                 },
                 complete: function() {
                     completedRequests++;
+                    updateProgress(completedRequests, totalRequests);
                     if (completedRequests === totalRequests) {
                         var messageClass = errorsEncountered ? 'notice-error' : 'notice-success';
                         var messageText = errorsEncountered ? 'Completed with errors. See log for details.' : 'All orders have been processed successfully.';
@@ -67,5 +71,10 @@ jQuery(document).ready(function($) {
                 }
             });
         });
+
+        function updateProgress(completed, total) {
+            var progressPercentage = Math.round((completed / total) * 100);
+            $('#progress-percentage').text(progressPercentage + '%');
+        }
     });
 });
