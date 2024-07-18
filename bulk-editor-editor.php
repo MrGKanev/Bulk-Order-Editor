@@ -61,6 +61,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
     }
 
     // Display the custom admin page content
+    // Add a new field for promo code in the admin page form
     function order_status_editor_page_content()
     {
         $order_statuses = get_woocommerce_order_statuses();
@@ -88,6 +89,11 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                 <div class="form-group">
                     <label for="order_total">Order Total:</label>
                     <input type="number" step="0.01" id="order_total" name="order_total">
+                </div>
+
+                <div class="form-group">
+                    <label for="promo_code">Promo Code:</label>
+                    <input type="text" id="promo_code" name="promo_code">
                 </div>
 
                 <h2>Customer Details</h2>
@@ -128,10 +134,9 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         </div>
 <?php
     }
-
     // Handle AJAX request for individual order updates
     add_action('wp_ajax_update_single_order', 'handle_update_single_order_ajax');
-
+    // Handle AJAX request for individual order updates, including promo code
     function handle_update_single_order_ajax()
     {
         check_ajax_referer('bulk_order_editor_nonce', 'nonce');
@@ -140,12 +145,16 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             $order_id = intval(sanitize_text_field($_POST['order_id']));
             $order_status = isset($_POST['order_status']) ? sanitize_text_field($_POST['order_status']) : '';
             $order_total = isset($_POST['order_total']) ? floatval($_POST['order_total']) : '';
+            $promo_code = isset($_POST['promo_code']) ? sanitize_text_field($_POST['promo_code']) : '';
             $customer_note = isset($_POST['customer_note']) ? sanitize_textarea_field($_POST['customer_note']) : '';
             $note_type = isset($_POST['note_type']) ? sanitize_text_field($_POST['note_type']) : 'private';
             $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : null;
             $order_date = isset($_POST['order_date']) ? sanitize_text_field($_POST['order_date']) : '';
             $current_user = wp_get_current_user();
             $current_user_name = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
+
+            // Log the received data
+            error_log('Received Data: ' . print_r($_POST, true));
 
             $order = wc_get_order($order_id);
             if ($order) {
@@ -172,12 +181,23 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                     $order->add_order_note(sprintf('Order total changed from %.2f to %.2f by <b>%s</b>', $previous_total, $order_total, $current_user_name));
                 }
 
+                if (!empty($promo_code)) {
+                    $result = $order->apply_coupon($promo_code);
+                    if (is_wp_error($result)) {
+                        $log_entries[] = sprintf('Failed to add promo code "%s" to order #%d: %s', $promo_code, $order_id, $result->get_error_message());
+                    } else {
+                        $log_entries[] = sprintf('Order #%d promo code added: "%s"', $order_id, $promo_code);
+                        $order->add_order_note(sprintf('Promo code "%s" added by <b>%s</b>', $promo_code, $current_user_name));
+                    }
+                }
+
                 if (!empty($customer_note)) {
                     $order->add_order_note(sprintf('Note added by %s: "%s"', $current_user_name, $customer_note), $note_type === 'customer');
                     $log_entries[] = sprintf('Order #%d note added: "%s"', $order_id, $customer_note);
                 }
 
-                if ($order_date && $order->get_date_created()->format('Y-m-d') !== $order_date) {
+                if ($order_date && $order->get_date_created()->format('Y-m-d') !== $order_date
+                ) {
                     $previous_date = $order->get_date_created()->format('Y-m-d');
                     $order->set_date_created($order_date);
                     $log_entries[] = sprintf('Order #%d date of creation changed from "%s" to "%s"', $order_id, $previous_date, $order_date);
@@ -196,9 +216,11 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                     'status'      => 'success'
                 ));
             } else {
+                error_log(sprintf('Order #%d not found', $order_id)); // Add error logging
                 wp_send_json_error(array('message' => sprintf('Order #%d not found', $order_id)));
             }
         } else {
+            error_log('Invalid order ID.'); // Add error logging
             wp_send_json_error(array('message' => 'Invalid order ID.'));
         }
     }

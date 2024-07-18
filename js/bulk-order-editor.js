@@ -5,6 +5,7 @@ jQuery(document).ready(function($) {
         var orderIds = $('#order_ids').val().split(',');
         var orderStatus = $('#order_status').val();
         var orderTotal = $('#order_total').val();
+        var promoCode = $('#promo_code').val();
         var customerNote = $('#customer_note').val();
         var noteType = $('#note_type').val();
         var customerId = $('#customer_id').val();
@@ -31,6 +32,22 @@ jQuery(document).ready(function($) {
                 updateProgress(completedRequests, totalRequests);
                 return;
             }
+
+            // Log the data being sent
+            console.log({
+                action: 'update_single_order',
+                nonce: bulkOrderEditor.nonce,
+                order_id: orderId,
+                order_status: orderStatus,
+                order_total: orderTotal,
+                promo_code: promoCode,
+                customer_note: customerNote,
+                note_type: noteType,
+                customer_id: customerId,
+                order_date: orderDate,
+                actioner_id: actionerId
+            });
+
             $.ajax({
                 url: bulkOrderEditor.ajax_url,
                 type: 'POST',
@@ -40,6 +57,7 @@ jQuery(document).ready(function($) {
                     order_id: orderId,
                     order_status: orderStatus,
                     order_total: orderTotal,
+                    promo_code: promoCode,
                     customer_note: customerNote,
                     note_type: noteType,
                     customer_id: customerId,
