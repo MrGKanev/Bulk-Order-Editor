@@ -64,7 +64,6 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
     function order_status_editor_page_content()
     {
         $order_statuses = get_woocommerce_order_statuses();
-        $users = get_users(array('fields' => array('ID', 'display_name')));
 ?>
         <div class="wrap">
             <h1>Bulk Order Editor</h1>
@@ -116,16 +115,6 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                     <input type="date" id="order_date" name="order_date">
                 </div>
 
-                <div class="form-group">
-                    <label for="actioner_id">Order Actioner (User ID):</label>
-                    <select id="actioner_id" name="actioner_id">
-                        <option value="">Select a user</option>
-                        <?php foreach ($users as $user) : ?>
-                            <option value="<?php echo esc_attr($user->ID); ?>"><?php echo esc_html($user->display_name); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
                 <input type="submit" value="Update Orders" class="button button-primary">
             </form>
 
@@ -155,7 +144,6 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             $note_type = isset($_POST['note_type']) ? sanitize_text_field($_POST['note_type']) : 'private';
             $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : null;
             $order_date = isset($_POST['order_date']) ? sanitize_text_field($_POST['order_date']) : '';
-            $actioner_id = isset($_POST['actioner_id']) ? intval($_POST['actioner_id']) : get_current_user_id();
             $current_user = wp_get_current_user();
             $current_user_name = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
 
@@ -166,22 +154,22 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                 if ($customer_id && $order->get_customer_id() !== $customer_id) {
                     $previous_customer_id = $order->get_customer_id();
                     $order->set_customer_id($customer_id);
-                    $log_entries[] = sprintf('Order #%d customer ID changed from %d to %d', $order_id, $previous_customer_id, $customer_id);
-                    $order->add_order_note(sprintf('Order customer ID changed from %d to %d by %s', $previous_customer_id, $customer_id, $current_user_name));
+                    $log_entries[] = sprintf('Order #%d customer ID changed from "%d" to "%d"', $order_id, $previous_customer_id, $customer_id);
+                    $order->add_order_note(sprintf('Order customer ID changed from "%d" to "%d" by <b>%s</b>', $previous_customer_id, $customer_id, $current_user_name));
                 }
 
                 if ($order_status && $order->get_status() !== $order_status) {
                     $previous_status = $order->get_status();
                     $order->update_status($order_status);
                     $log_entries[] = sprintf('Order #%d status changed from "%s" to "%s"', $order_id, wc_get_order_status_name($previous_status), wc_get_order_status_name($order_status));
-                    $order->add_order_note(sprintf('Order status changed from "%s" to "%s" by %s', wc_get_order_status_name($previous_status), wc_get_order_status_name($order_status), $current_user_name));
+                    $order->add_order_note(sprintf('Order status changed from "%s" to "%s" by <b>%s</b>', wc_get_order_status_name($previous_status), wc_get_order_status_name($order_status), $current_user_name));
                 }
 
                 if ($order_total && $order->get_total() != $order_total) {
                     $previous_total = $order->get_total();
                     $order->set_total($order_total);
                     $log_entries[] = sprintf('Order #%d total changed from %.2f to %.2f', $order_id, $previous_total, $order_total);
-                    $order->add_order_note(sprintf('Order total changed from %.2f to %.2f by %s', $previous_total, $order_total, $current_user_name));
+                    $order->add_order_note(sprintf('Order total changed from %.2f to %.2f by <b>%s</b>', $previous_total, $order_total, $current_user_name));
                 }
 
                 if (!empty($customer_note)) {
@@ -192,8 +180,8 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                 if ($order_date && $order->get_date_created()->format('Y-m-d') !== $order_date) {
                     $previous_date = $order->get_date_created()->format('Y-m-d');
                     $order->set_date_created($order_date);
-                    $log_entries[] = sprintf('Order #%d date of creation changed from %s to %s', $order_id, $previous_date, $order_date);
-                    $order->add_order_note(sprintf('Order date of creation changed from %s to %s by %s', $previous_date, $order_date, $current_user_name));
+                    $log_entries[] = sprintf('Order #%d date of creation changed from "%s" to "%s"', $order_id, $previous_date, $order_date);
+                    $order->add_order_note(sprintf('Order date of creation changed from "%s" to "%s" by <b>%s</b>', $previous_date, $order_date, $current_user_name));
                 }
 
                 // Add separator line after all changes for this order
@@ -202,7 +190,6 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                 }
 
                 $order->save();
-                update_post_meta($order_id, '_last_actioner_user_id', $actioner_id);
 
                 wp_send_json_success(array(
                     'log_entries' => $log_entries,
