@@ -10,6 +10,7 @@ jQuery(document).ready(function($) {
         var noteType = $('#note_type').val();
         var customerId = $('#customer_id').val();
         var orderDate = $('#order_date').val();
+        var orderTime = $('#order_time').val(); // Get the order time
         var actionerId = $('#actioner_id').val();
 
         if (orderIds[0].trim() === '') {
@@ -45,6 +46,7 @@ jQuery(document).ready(function($) {
                 note_type: noteType,
                 customer_id: customerId,
                 order_date: orderDate,
+                order_time: orderTime, // Include order time
                 actioner_id: actionerId
             });
 
@@ -62,6 +64,7 @@ jQuery(document).ready(function($) {
                     note_type: noteType,
                     customer_id: customerId,
                     order_date: orderDate,
+                    order_time: orderTime, // Include order time
                     actioner_id: actionerId
                 },
                 success: function(response) {
