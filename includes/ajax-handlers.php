@@ -20,7 +20,17 @@ function handle_update_single_order_ajax()
         // Log the received data
         error_log('Received Data: ' . print_r($_POST, true));
 
-        $order = wc_get_order($order_id);
+        // Check if HPOS is enabled
+        $is_hpos_enabled = function_exists('wc_get_order') && function_exists('wc_get_orders');
+
+        if ($is_hpos_enabled) {
+            // Use HPOS functions
+            $order = wc_get_order($order_id);
+        } else {
+            // Use legacy functions
+            $order = new WC_Order($order_id);
+        }
+
         if ($order) {
             $log_entries = [];
 
@@ -77,7 +87,13 @@ function handle_update_single_order_ajax()
                 $log_entries[] = "--------------------------------";
             }
 
-            $order->save();
+            if ($is_hpos_enabled) {
+                // Use HPOS function to update the order
+                wc_update_order($order);
+            } else {
+                // Use legacy function to update the order
+                $order->save();
+            }
 
             wp_send_json_success(array(
                 'log_entries' => $log_entries,

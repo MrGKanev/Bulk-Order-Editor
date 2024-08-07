@@ -7,7 +7,8 @@ The Bulk Order Editor plugin allows WooCommerce store administrators to quickly 
 - **Bulk Edit Orders**: Change the status, total, customer notes, and more for multiple orders at once.
 - **AJAX-powered Interface**: Smooth and asynchronous data processing to avoid page reloads.
 - **User-friendly Interface**: Easy-to-navigate admin interface with clear forms and validation.
-- **Logging**: Easy to check if something isn't working correctly 
+- **Logging**: Easy to check if something isn't working correctly
+
 ## Installation
 
 1. **Clone the Repository**:
