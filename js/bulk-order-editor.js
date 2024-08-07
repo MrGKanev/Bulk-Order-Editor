@@ -10,17 +10,17 @@ jQuery(document).ready(function($) {
         var noteType = $('#note_type').val();
         var customerId = $('#customer_id').val();
         var orderDate = $('#order_date').val();
-        var orderTime = $('#order_time').val(); // Get the order time
+        var orderTime = $('#order_time').val();
         var actionerId = $('#actioner_id').val();
 
         if (orderIds[0].trim() === '') {
             alert('Please enter at least one order ID.');
-            return; // Stop execution if no IDs are provided.
+            return;
         }
 
-        $('#log-list').empty(); // Clear existing logs before starting new submissions.
-        $('#progress-percentage').text('0%'); // Reset progress percentage.
-        $('#update-progress').show(); // Show the progress text
+        $('#log-list').empty();
+        $('#progress-percentage').text('0%');
+        $('#update-progress').show();
 
         var completedRequests = 0;
         var totalRequests = orderIds.length;
@@ -29,12 +29,11 @@ jQuery(document).ready(function($) {
         orderIds.forEach(function(orderId) {
             orderId = orderId.trim();
             if (!orderId) {
-                completedRequests++; // Skip empty entries and count them as 'processed'.
+                completedRequests++;
                 updateProgress(completedRequests, totalRequests);
                 return;
             }
 
-            // Log the data being sent
             console.log({
                 action: 'update_single_order',
                 nonce: bulkOrderEditor.nonce,
@@ -46,7 +45,7 @@ jQuery(document).ready(function($) {
                 note_type: noteType,
                 customer_id: customerId,
                 order_date: orderDate,
-                order_time: orderTime, // Include order time
+                order_time: orderTime,
                 actioner_id: actionerId
             });
 
@@ -64,8 +63,9 @@ jQuery(document).ready(function($) {
                     note_type: noteType,
                     customer_id: customerId,
                     order_date: orderDate,
-                    order_time: orderTime, // Include order time
-                    actioner_id: actionerId
+                    order_time: orderTime,
+                    actioner_id: actionerId,
+                    hpos_enabled: true
                 },
                 success: function(response) {
                     if (response.success) {
