@@ -1,87 +1,113 @@
 <?php
+if (!defined('ABSPATH')) {
+    exit; // Exit if accessed directly
+}
 
-function order_status_editor_page_content()
+/**
+ * Render the admin page content
+ */
+function boe_admin_page_content()
 {
-    $order_statuses = get_woocommerce_order_statuses();
+    // Check user capabilities
+    if (!current_user_can('manage_woocommerce')) {
+        return;
+    }
+
+    // Get WooCommerce order statuses
+    $order_statuses = wc_get_order_statuses();
+
 ?>
     <div class="wrap">
-        <h1>Bulk Order Editor</h1>
-        <div id="response-message"></div>
-        <form id="order-status-form" class="order-status-form">
-            <div class="order-details">
-                <h2>Order Details</h2>
-                <div class="form-group">
-                    <label for="order_ids">Order IDs (comma-separated):</label>
-                    <input type="text" id="order_ids" name="order_ids" required>
-                </div>
+        <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 
-                <div class="form-group">
-                    <label for="order_status">Order Status:</label>
-                    <select id="order_status" name="order_status">
-                        <option value="">Select status</option>
-                        <?php foreach ($order_statuses as $status_key => $status_label) : ?>
-                            <option value="<?php echo esc_attr($status_key); ?>"><?php echo esc_html($status_label); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+        <form id="bulk-order-editor-form" method="post">
+            <?php wp_nonce_field('bulk_order_editor_action', 'bulk_order_editor_nonce'); ?>
 
-                <div class="form-group">
-                    <label for="order_total">Order Total:</label>
-                    <input type="number" step="0.01" id="order_total" name="order_total">
-                </div>
+            <table class="form-table">
+                <tr>
+                    <th scope="row"><label for="order_ids"><?php _e('Order IDs', 'bulk-order-editor'); ?></label></th>
+                    <td>
+                        <input type="text" id="order_ids" name="order_ids" class="regular-text" placeholder="<?php esc_attr_e('Enter comma-separated order IDs', 'bulk-order-editor'); ?>" required>
+                        <p class="description"><?php _e('Enter the IDs of the orders you want to edit, separated by commas.', 'bulk-order-editor'); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="order_status"><?php _e('New Order Status', 'bulk-order-editor'); ?></label></th>
+                    <td>
+                        <select id="order_status" name="order_status">
+                            <option value=""><?php _e('— Select —', 'bulk-order-editor'); ?></option>
+                            <?php foreach ($order_statuses as $status => $label) : ?>
+                                <option value="<?php echo esc_attr($status); ?>"><?php echo esc_html($label); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="customer_note"><?php _e('Customer Note', 'bulk-order-editor'); ?></label></th>
+                    <td>
+                        <textarea id="customer_note" name="customer_note" rows="5" cols="50" class="large-text"></textarea>
+                        <p class="description"><?php _e('Add a note visible to customers. Leave blank for no change.', 'bulk-order-editor'); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="private_note"><?php _e('Private Note', 'bulk-order-editor'); ?></label></th>
+                    <td>
+                        <textarea id="private_note" name="private_note" rows="5" cols="50" class="large-text"></textarea>
+                        <p class="description"><?php _e('Add a private note. Leave blank for no change.', 'bulk-order-editor'); ?></p>
+                    </td>
+                </tr>
+            </table>
 
-                <div class="form-group">
-                    <label for="promo_code">Promo Code:</label>
-                    <input type="text" id="promo_code" name="promo_code">
-                </div>
-            </div>
-
-            <div class="customer-details">
-                <h2>Customer Details</h2>
-                <div class="form-group">
-                    <label for="customer_id">Customer ID:</label>
-                    <input type="number" id="customer_id" name="customer_id">
-                </div>
-
-                <div class="form-group">
-                    <label for="customer_note">Note:</label>
-                    <textarea id="customer_note" name="customer_note"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="note_type">Note Type:</label>
-                    <select id="note_type" name="note_type">
-                        <option value="private">Private</option>
-                        <option value="customer">Customer</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="order-processing">
-                <h2>Order Processing</h2>
-                <div class="form-group">
-                    <label for="order_date">Order Date (YYYY-MM-DD):</label>
-                    <input type="date" id="order_date" name="order_date">
-                </div>
-
-                <div class="form-group">
-                    <label for="order_time">Order Time (HH:MM):</label>
-                    <input type="time" id="order_time" name="order_time">
-                </div>
-            </div>
-
-            <div class="form-actions">
-                <input type="submit" value="Update Orders" class="button button-primary">
-            </div>
+            <?php submit_button(__('Update Orders', 'bulk-order-editor')); ?>
         </form>
 
-        <div class="log-area">
-            <h2>Update Log</h2>
-            <p id="update-progress" style="display:none;">Progress: <span id="progress-percentage">0%</span></p>
-            <ul id="log-list">
-                <li>No log entries found.</li>
-            </ul>
+        <div id="bulk-order-editor-results" style="display:none;">
+            <h2><?php _e('Update Results', 'bulk-order-editor'); ?></h2>
+            <div id="update-log"></div>
         </div>
     </div>
+
+    <script>
+        jQuery(document).ready(function($) {
+            $('#bulk-order-editor-form').on('submit', function(e) {
+                e.preventDefault();
+                var form = $(this);
+                var results = $('#bulk-order-editor-results');
+                var log = $('#update-log');
+
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: form.serialize() + '&action=boe_update_orders',
+                    beforeSend: function() {
+                        form.find('input[type="submit"]').prop('disabled', true);
+                        results.show();
+                        log.html('<p><?php _e('Updating orders...', 'bulk-order-editor'); ?></p>');
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            log.html('<p>' + response.data.message + '</p>');
+                            if (response.data.updates) {
+                                var updates = '<ul>';
+                                $.each(response.data.updates, function(index, update) {
+                                    updates += '<li>' + update + '</li>';
+                                });
+                                updates += '</ul>';
+                                log.append(updates);
+                            }
+                        } else {
+                            log.html('<p><?php _e('Error: ', 'bulk-order-editor'); ?>' + response.data.message + '</p>');
+                        }
+                    },
+                    error: function() {
+                        log.html('<p><?php _e('An error occurred. Please try again.', 'bulk-order-editor'); ?></p>');
+                    },
+                    complete: function() {
+                        form.find('input[type="submit"]').prop('disabled', false);
+                    }
+                });
+            });
+        });
+    </script>
 <?php
 }

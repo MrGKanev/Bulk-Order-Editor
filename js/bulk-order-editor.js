@@ -1,60 +1,44 @@
 jQuery(document).ready(function($) {
-    $('#order-status-form').on('submit', function(event) {
+    const $form = $('#order-status-form');
+    const $logList = $('#log-list');
+    const $progressBar = $('#update-progress');
+    const $progressPercentage = $('#progress-percentage');
+    const $responseMessage = $('#response-message');
+
+    $form.on('submit', function(event) {
         event.preventDefault();
 
-        var orderIds = $('#order_ids').val().split(',');
-        var orderStatus = $('#order_status').val();
-        var orderTotal = $('#order_total').val();
-        var promoCode = $('#promo_code').val();
-        var customerNote = $('#customer_note').val();
-        var noteType = $('#note_type').val();
-        var customerId = $('#customer_id').val();
-        var orderDate = $('#order_date').val();
-        var orderTime = $('#order_time').val();
-        var actionerId = $('#actioner_id').val();
+        const orderIds = $('#order_ids').val().split(',').map(id => id.trim()).filter(Boolean);
+        const orderStatus = $('#order_status').val();
+        const orderTotal = $('#order_total').val();
+        const promoCode = $('#promo_code').val();
+        const customerNote = $('#customer_note').val();
+        const noteType = $('#note_type').val();
+        const customerId = $('#customer_id').val();
+        const orderDate = $('#order_date').val();
+        const orderTime = $('#order_time').val();
 
-        if (orderIds[0].trim() === '') {
-            alert('Please enter at least one order ID.');
+        if (orderIds.length === 0) {
+            alert('Please enter at least one valid order ID.');
             return;
         }
 
-        $('#log-list').empty();
-        $('#progress-percentage').text('0%');
-        $('#update-progress').show();
+        $logList.empty();
+        $progressPercentage.text('0%');
+        $progressBar.show();
+        $responseMessage.empty();
 
-        var completedRequests = 0;
-        var totalRequests = orderIds.length;
-        var errorsEncountered = false;
+        let completedRequests = 0;
+        let successfulUpdates = 0;
+        let errorsEncountered = false;
 
         orderIds.forEach(function(orderId) {
-            orderId = orderId.trim();
-            if (!orderId) {
-                completedRequests++;
-                updateProgress(completedRequests, totalRequests);
-                return;
-            }
-
-            console.log({
-                action: 'update_single_order',
-                nonce: bulkOrderEditor.nonce,
-                order_id: orderId,
-                order_status: orderStatus,
-                order_total: orderTotal,
-                promo_code: promoCode,
-                customer_note: customerNote,
-                note_type: noteType,
-                customer_id: customerId,
-                order_date: orderDate,
-                order_time: orderTime,
-                actioner_id: actionerId
-            });
-
             $.ajax({
-                url: bulkOrderEditor.ajax_url,
+                url: boeAjax.ajax_url,
                 type: 'POST',
                 data: {
-                    action: 'update_single_order',
-                    nonce: bulkOrderEditor.nonce,
+                    action: 'boe_update_order',
+                    nonce: boeAjax.nonce,
                     order_id: orderId,
                     order_status: orderStatus,
                     order_total: orderTotal,
@@ -63,39 +47,79 @@ jQuery(document).ready(function($) {
                     note_type: noteType,
                     customer_id: customerId,
                     order_date: orderDate,
-                    order_time: orderTime,
-                    actioner_id: actionerId,
-                    hpos_enabled: true
+                    order_time: orderTime
                 },
                 success: function(response) {
                     if (response.success) {
-                        response.data.log_entries.forEach(function(log) {
-                            $('#log-list').append('<li>' + log + '</li>');
-                        });
+                        if (response.data.status === 'success') {
+                            response.data.log_entries.forEach(function(log) {
+                                $logList.append('<li>' + log + '</li>');
+                            });
+                            successfulUpdates++;
+                        } else if (response.data.status === 'no_changes') {
+                            $logList.append('<li>No changes made to order #' + orderId + '</li>');
+                        }
                     } else {
-                        $('#log-list').append('<li>Error with order #' + orderId + ': ' + response.data.message + '</li>');
+                        $logList.append('<li>Error with order #' + orderId + ': ' + response.data.message + '</li>');
                         errorsEncountered = true;
                     }
                 },
                 error: function(xhr, status, error) {
-                    $('#log-list').append('<li>Request failed for order #' + orderId + ': ' + error + '</li>');
+                    $logList.append('<li>Request failed for order #' + orderId + ': ' + error + '</li>');
                     errorsEncountered = true;
                 },
                 complete: function() {
                     completedRequests++;
-                    updateProgress(completedRequests, totalRequests);
-                    if (completedRequests === totalRequests) {
-                        var messageClass = errorsEncountered ? 'notice-error' : 'notice-success';
-                        var messageText = errorsEncountered ? 'Completed with errors. See log for details.' : 'All orders have been processed successfully.';
-                        $('#response-message').html('<div class="notice ' + messageClass + '"><p>' + messageText + '</p></div>');
+                    updateProgress(completedRequests, orderIds.length);
+                    if (completedRequests === orderIds.length) {
+                        displayFinalMessage(successfulUpdates, orderIds.length, errorsEncountered);
                     }
                 }
             });
         });
+    });
 
-        function updateProgress(completed, total) {
-            var progressPercentage = Math.round((completed / total) * 100);
-            $('#progress-percentage').text(progressPercentage + '%');
+    function updateProgress(completed, total) {
+        const progressPercentage = Math.round((completed / total) * 100);
+        $progressPercentage.text(progressPercentage + '%');
+    }
+
+    function displayFinalMessage(successful, total, hasErrors) {
+        let message, messageClass;
+        if (successful === total && !hasErrors) {
+            message = 'All orders have been processed successfully.';
+            messageClass = 'notice-success';
+        } else if (successful > 0) {
+            message = `Completed with ${successful} out of ${total} orders updated successfully.`;
+            messageClass = hasErrors ? 'notice-warning' : 'notice-success';
+        } else {
+            message = 'Failed to update any orders. Please check the log for details.';
+            messageClass = 'notice-error';
+        }
+        $responseMessage.html('<div class="notice ' + messageClass + '"><p>' + message + '</p></div>');
+    }
+
+    // Optional: Add real-time validation for order IDs
+    $('#order_ids').on('change', function() {
+        const orderIds = $(this).val().split(',').map(id => id.trim()).filter(Boolean);
+        if (orderIds.length === 0) {
+            $(this).addClass('error');
+        } else {
+            $(this).removeClass('error');
         }
     });
+
+    // Optional: Add datepicker for order date field if you're using jQuery UI
+    if ($.datepicker) {
+        $('#order_date').datepicker({
+            dateFormat: 'yy-mm-dd'
+        });
+    }
+
+    // Optional: Add timepicker for order time field if you're using jQuery UI Timepicker
+    if ($.timepicker) {
+        $('#order_time').timepicker({
+            timeFormat: 'HH:mm'
+        });
+    }
 });
