@@ -21,6 +21,8 @@ jQuery(document).ready(function($) {
     function processOrders(orderIds, formData, processed) {
         if (processed >= orderIds.length) {
             $('#response-message').html('<div class="notice notice-success"><p>All orders have been processed successfully.</p></div>');
+            $('#update-progress').hide();
+            clearFormFields();
             return;
         }
 
@@ -53,16 +55,44 @@ jQuery(document).ready(function($) {
         $('#progress-percentage').text(percentage + '%');
     }
 
-function updateLog(logEntries) {
-    if (Array.isArray(logEntries)) {
-        logEntries.forEach(function(entry) {
-            $('#log-list').append('<li>' + entry + '</li>');
-        });
-    } else if (typeof logEntries === 'string') {
-        $('#log-list').append('<li>' + logEntries + '</li>');
+    function updateLog(logEntries) {
+        if (Array.isArray(logEntries)) {
+            logEntries.forEach(function(entry) {
+                $('#log-list').append('<li>' + entry + '</li>');
+            });
+        } else if (typeof logEntries === 'string') {
+            $('#log-list').append('<li>' + logEntries + '</li>');
+        }
+        var logList = document.getElementById('log-list');
+        logList.scrollTop = logList.scrollHeight;
     }
-    // Scroll to the bottom of the log list
-    var logList = document.getElementById('log-list');
-    logList.scrollTop = logList.scrollHeight;
-}
+
+    // New function to log shipping method changes
+    $('#shipping_method').on('change', function() {
+        var selectedMethod = $(this).val();
+        var selectedMethodText = $(this).find('option:selected').text();
+        if (selectedMethod) {
+            updateLog('Shipping method selected: ' + selectedMethodText);
+        }
+    });
+
+    // New function to log tracking number changes
+    var trackingNumberTimeout;
+    $('#tracking_number').on('input', function() {
+        var trackingNumber = $(this).val();
+        clearTimeout(trackingNumberTimeout);
+        trackingNumberTimeout = setTimeout(function() {
+            if (trackingNumber.length > 0) {
+                updateLog('Tracking number entered: ' + trackingNumber);
+            }
+        }, 500); // Wait for 500ms after the user stops typing
+    });
+
+    function clearFormFields() {
+        $('#order_status, #order_total, #promo_code, #customer_id, #customer_note, #note_type, #order_datetime, #shipping_method, #tracking_number').val('');
+        updateLog('Form fields cleared');
+    }
+
+    // Initial log entry when the page loads
+    updateLog('Bulk Order Editor ready. Enter order IDs and make changes to begin.');
 });

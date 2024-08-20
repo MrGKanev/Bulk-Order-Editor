@@ -1,3 +1,9 @@
+<?php
+// Check if this file is being accessed directly
+if (!defined('ABSPATH')) {
+    exit; // Exit if accessed directly
+}
+?>
 <div class="wrap">
     <h1>Bulk Order Editor</h1>
     <div id="response-message"></div>
@@ -56,14 +62,31 @@
             <input type="datetime-local" id="order_datetime" name="order_datetime">
         </div>
 
+        <h2>Shipping Details</h2>
+        <div class="form-group">
+            <label for="shipping_method">Shipping Method:</label>
+            <select id="shipping_method" name="shipping_method">
+                <option value="">Select shipping method</option>
+                <?php
+                $shipping_methods = WC()->shipping()->get_shipping_methods();
+                foreach ($shipping_methods as $method) {
+                    echo '<option value="' . esc_attr($method->id) . '">' . esc_html($method->method_title) . '</option>';
+                }
+                ?>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="tracking_number">Tracking Number:</label>
+            <input type="text" id="tracking_number" name="tracking_number">
+        </div>
+
+        <?php wp_nonce_field('bulk_order_editor_nonce', 'bulk_order_editor_nonce'); ?>
         <input type="submit" value="Update Orders" class="button button-primary">
     </form>
 
     <div class="log-area">
         <h2>Update Log</h2>
         <p id="update-progress" style="display:none;">Progress: <span id="progress-percentage">0%</span></p>
-        <ul id="log-list">
-            <li>No log entries found.</li>
-        </ul>
+        <ul id="log-list"></ul>
     </div>
 </div>

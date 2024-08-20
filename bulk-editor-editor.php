@@ -42,3 +42,45 @@ function run_bulk_order_editor()
 }
 
 run_bulk_order_editor();
+
+// Activation hook
+register_activation_hook(__FILE__, 'bulk_order_editor_activate');
+
+function bulk_order_editor_activate()
+{
+    // Activation code here (if any)
+}
+
+// Deactivation hook
+register_deactivation_hook(__FILE__, 'bulk_order_editor_deactivate');
+
+function bulk_order_editor_deactivate()
+{
+    // Deactivation code here (if any)
+}
+
+// Uninstall hook
+register_uninstall_hook(__FILE__, 'bulk_order_editor_uninstall');
+
+function bulk_order_editor_uninstall()
+{
+    // Uninstall code here (if any)
+}
+
+// Add settings link on plugin page
+add_filter('plugin_action_links_' . plugin_basename(__FILE__), 'bulk_order_editor_settings_link');
+
+function bulk_order_editor_settings_link($links)
+{
+    $settings_link = '<a href="admin.php?page=bulk-order-editor">Settings</a>';
+    array_unshift($links, $settings_link);
+    return $links;
+}
+
+// Load text domain for internationalization
+add_action('plugins_loaded', 'bulk_order_editor_load_textdomain');
+
+function bulk_order_editor_load_textdomain()
+{
+    load_plugin_textdomain('bulk-order-editor', false, dirname(plugin_basename(__FILE__)) . '/languages/');
+}
