@@ -67,12 +67,20 @@ jQuery(document).ready(function($) {
         logList.scrollTop = logList.scrollHeight;
     }
 
-    // New function to log shipping method changes
+ // Log shipping method changes
     $('#shipping_method').on('change', function() {
         var selectedMethod = $(this).val();
         var selectedMethodText = $(this).find('option:selected').text();
         if (selectedMethod) {
             updateLog('Shipping method selected: ' + selectedMethodText);
+        }
+    });
+
+    // Log shipping price changes
+    $('#shipping_price').on('change', function() {
+        var shippingPrice = $(this).val();
+        if (shippingPrice) {
+            updateLog('Shipping price set to: ' + shippingPrice);
         }
     });
 

@@ -76,8 +76,8 @@ if (!defined('ABSPATH')) {
             </select>
         </div>
         <div class="form-group">
-            <label for="tracking_number">Tracking Number:</label>
-            <input type="text" id="tracking_number" name="tracking_number">
+            <label for="shipping_price">Shipping Price:</label>
+            <input type="number" step="0.01" id="shipping_price" name="shipping_price">
         </div>
 
         <?php wp_nonce_field('bulk_order_editor_nonce', 'bulk_order_editor_nonce'); ?>

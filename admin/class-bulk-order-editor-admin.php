@@ -186,7 +186,7 @@ class Bulk_Order_Editor_Admin
         $current_user = wp_get_current_user();
         $current_user_name = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
 
-        // Update shipping method
+        // Update shipping method and price
         if (!empty($data['shipping_method'])) {
             $new_shipping_method_id = sanitize_text_field($data['shipping_method']);
             $current_shipping_method = $order->get_shipping_method();
@@ -194,9 +194,15 @@ class Bulk_Order_Editor_Admin
             $shipping_methods = WC()->shipping()->get_shipping_methods();
             $new_shipping_method_title = isset($shipping_methods[$new_shipping_method_id]) ? $shipping_methods[$new_shipping_method_id]->method_title : $new_shipping_method_id;
 
-            if ($current_shipping_method !== $new_shipping_method_title) {
+            $new_shipping_price = isset($data['shipping_price']) ? floatval($data['shipping_price']) : 0;
+
+            $shipping_items = $order->get_items('shipping');
+            $current_shipping_item = reset($shipping_items);
+            $current_shipping_price = $current_shipping_item ? $current_shipping_item->get_total() : 0;
+
+            if ($current_shipping_method !== $new_shipping_method_title || abs($current_shipping_price - $new_shipping_price) > 0.01) {
                 // Remove current shipping
-                foreach ($order->get_items('shipping') as $item_id => $shipping_item) {
+                foreach ($shipping_items as $item_id => $shipping_item) {
                     $order->remove_item($item_id);
                 }
 
@@ -204,11 +210,22 @@ class Bulk_Order_Editor_Admin
                 $shipping_item = new WC_Order_Item_Shipping();
                 $shipping_item->set_method_title($new_shipping_method_title);
                 $shipping_item->set_method_id($new_shipping_method_id);
+                $shipping_item->set_total($new_shipping_price);
                 $order->add_item($shipping_item);
 
-                $note = sprintf('Shipping method changed from "%s" to "%s" by %s', $current_shipping_method, $new_shipping_method_title, $current_user_name);
+                $note = sprintf(
+                    'Shipping updated by %s. Method changed from "%s" to "%s". Price changed from %s to %s.',
+                    $current_user_name,
+                    $current_shipping_method,
+                    $new_shipping_method_title,
+                    wc_price($current_shipping_price),
+                    wc_price($new_shipping_price)
+                );
                 $order->add_order_note($note);
                 $log_entries[] = sprintf('Order #%d: %s', $order->get_id(), $note);
+
+                // Recalculate totals
+                $order->calculate_totals();
             }
         }
 
