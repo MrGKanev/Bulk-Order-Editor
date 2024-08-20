@@ -144,6 +144,91 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 <?php
     }
 
+
+    // New function to handle batch processing
+    function handle_batch_update_orders()
+    {
+        check_ajax_referer('bulk_order_editor_nonce', 'nonce');
+
+        $order_ids = isset($_POST['order_ids']) ? array_map('intval', explode(',', $_POST['order_ids'])) : [];
+        $batch_size = 10; // Process 10 orders at a time
+        $processed = isset($_POST['processed']) ? intval($_POST['processed']) : 0;
+
+        $batch = array_slice($order_ids, $processed, $batch_size);
+        $results = [];
+
+        foreach ($batch as $order_id) {
+            $result = process_single_order($order_id, $_POST);
+            $results[] = $result;
+        }
+
+        $processed += count($batch);
+        $is_complete = $processed >= count($order_ids);
+
+        wp_send_json([
+            'success' => true,
+            'processed' => $processed,
+            'total' => count($order_ids),
+            'is_complete' => $is_complete,
+            'results' => $results
+        ]);
+    }
+
+    // Helper function to process a single order
+    function process_single_order($order_id, $data)
+    {
+        $order = wc_get_order($order_id);
+        if (!$order) {
+            return ['error' => sprintf('Order #%d not found', $order_id)];
+        }
+
+        $log_entries = [];
+
+        // Process order status
+        if (!empty($data['order_status'])) {
+            $new_status = sanitize_text_field($data['order_status']);
+            if ($order->get_status() !== $new_status) {
+                $order->set_status($new_status);
+                $log_entries[] = sprintf('Order #%d status changed to "%s"', $order_id, wc_get_order_status_name($new_status));
+            }
+        }
+
+        // Process order total
+        if (!empty($data['order_total'])) {
+            $new_total = floatval($data['order_total']);
+            if ($order->get_total() != $new_total) {
+                $order->set_total($new_total);
+                $log_entries[] = sprintf('Order #%d total changed to %.2f', $order_id, $new_total);
+            }
+        }
+
+        // Process promo code
+        if (!empty($data['promo_code'])) {
+            $promo_code = sanitize_text_field($data['promo_code']);
+            $coupon = new WC_Coupon($promo_code);
+            if ($coupon->get_id()) {
+                $result = $order->apply_coupon($coupon);
+                if (!is_wp_error($result)) {
+                    $log_entries[] = sprintf('Promo code "%s" applied to order #%d', $promo_code, $order_id);
+                }
+            }
+        }
+
+        // Process order date and time
+        if (!empty($data['order_datetime'])) {
+            $new_datetime = new WC_DateTime($data['order_datetime']);
+            $order->set_date_created($new_datetime);
+            $log_entries[] = sprintf('Order #%d date and time changed to %s', $order_id, $new_datetime->format('Y-m-d H:i:s'));
+        }
+
+        $order->save();
+
+        return ['order_id' => $order_id, 'log_entries' => $log_entries];
+    }
+
+    // Register the new AJAX action
+    add_action('wp_ajax_batch_update_orders', 'handle_batch_update_orders');
+
     // Handle AJAX request for individual order updates
     add_action('wp_ajax_update_single_order', 'handle_update_single_order_ajax');
 

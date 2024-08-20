@@ -96,3 +96,77 @@ jQuery(document).ready(function($) {
         }
     });
 });
+
+jQuery(document).ready(function($) {
+    $('#order-status-form').on('submit', function(event) {
+        event.preventDefault();
+
+        var orderIds = $('#order_ids').val().split(',').map(function(id) { return id.trim(); }).filter(Boolean);
+        var orderStatus = $('#order_status').val();
+        var orderTotal = $('#order_total').val();
+        var promoCode = $('#promo_code').val();
+        var orderDatetime = $('#order_datetime').val();
+
+        if (orderIds.length === 0) {
+            alert('Please enter at least one order ID.');
+            return;
+        }
+
+        $('#log-list').empty();
+        $('#progress-percentage').text('0%');
+        $('#update-progress').show();
+
+        processBatch(orderIds, 0);
+    });
+
+    function processBatch(orderIds, processed) {
+        $.ajax({
+            url: bulkOrderEditor.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'batch_update_orders',
+                nonce: bulkOrderEditor.nonce,
+                order_ids: orderIds.join(','),
+                processed: processed,
+                order_status: $('#order_status').val(),
+                order_total: $('#order_total').val(),
+                promo_code: $('#promo_code').val(),
+                order_datetime: $('#order_datetime').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    updateProgress(response.processed, response.total);
+                    updateLog(response.results);
+
+                    if (!response.is_complete) {
+                        processBatch(orderIds, response.processed);
+                    } else {
+                        $('#response-message').html('<div class="notice notice-success"><p>All orders have been processed successfully.</p></div>');
+                    }
+                } else {
+                    $('#response-message').html('<div class="notice notice-error"><p>An error occurred during processing.</p></div>');
+                }
+            },
+            error: function() {
+                $('#response-message').html('<div class="notice notice-error"><p>An error occurred during processing.</p></div>');
+            }
+        });
+    }
+
+    function updateProgress(processed, total) {
+        var percentage = Math.round((processed / total) * 100);
+        $('#progress-percentage').text(percentage + '%');
+    }
+
+    function updateLog(results) {
+        results.forEach(function(result) {
+            if (result.error) {
+                $('#log-list').append('<li class="error">' + result.error + '</li>');
+            } else {
+                result.log_entries.forEach(function(entry) {
+                    $('#log-list').append('<li>' + entry + '</li>');
+                });
+            }
+        });
+    }
+});
