@@ -195,9 +195,13 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                 if (!empty($promo_code)) {
                     $coupon = new WC_Coupon($promo_code);
                     if ($coupon->get_id()) {
-                        $order->apply_coupon($coupon);
-                        $log_entries[] = sprintf('Order #%d promo code added: "%s"', $order_id, $promo_code);
-                        $order->add_order_note(sprintf('Promo code "%s" added by <b>%s</b>', $promo_code, $current_user_name));
+                        $result = $order->apply_coupon($coupon);
+                        if (is_wp_error($result)) {
+                            $log_entries[] = sprintf('Failed to add promo code "%s" to order #%d: %s', $promo_code, $order_id, $result->get_error_message());
+                        } else {
+                            $log_entries[] = sprintf('Order #%d promo code added: "%s"', $order_id, $promo_code);
+                            $order->add_order_note(sprintf('Promo code "%s" added by <b>%s</b>', $promo_code, $current_user_name));
+                        }
                     } else {
                         $log_entries[] = sprintf('Failed to add promo code "%s" to order #%d: Coupon not found', $promo_code, $order_id);
                     }
