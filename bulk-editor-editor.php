@@ -126,9 +126,9 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
                 <h2>Order Processing</h2>
                 <div class="form-group">
-                    <label for="order_date">Order Date (YYYY-MM-DD):</label>
-                    <input type="date" id="order_date" name="order_date">
-                </div>
+                <label for="order_datetime">Order Date and Time:</label>
+                <input type="datetime-local" id="order_datetime" name="order_datetime">
+            </div>
 
                 <input type="submit" value="Update Orders" class="button button-primary">
             </form>
@@ -159,7 +159,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             $customer_note = isset($_POST['customer_note']) ? sanitize_textarea_field($_POST['customer_note']) : '';
             $note_type = isset($_POST['note_type']) ? sanitize_text_field($_POST['note_type']) : 'private';
             $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : null;
-            $order_date = isset($_POST['order_date']) ? sanitize_text_field($_POST['order_date']) : '';
+            $order_datetime = isset($_POST['order_datetime']) ? sanitize_text_field($_POST['order_datetime']) : '';
             $current_user = wp_get_current_user();
             $current_user_name = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
 
@@ -212,11 +212,12 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                     $log_entries[] = sprintf('Order #%d note added: "%s"', $order_id, $customer_note);
                 }
 
-                if ($order_date && $order->get_date_created()->format('Y-m-d') !== $order_date) {
-                    $previous_date = $order->get_date_created()->format('Y-m-d');
-                    $order->set_date_created($order_date);
-                    $log_entries[] = sprintf('Order #%d date of creation changed from "%s" to "%s"', $order_id, $previous_date, $order_date);
-                    $order->add_order_note(sprintf('Order date of creation changed from "%s" to "%s" by <b>%s</b>', $previous_date, $order_date, $current_user_name));
+                if ($order_datetime) {
+                    $previous_datetime = $order->get_date_created()->format('Y-m-d H:i:s');
+                    $new_datetime = new WC_DateTime($order_datetime);
+                    $order->set_date_created($new_datetime);
+                    $log_entries[] = sprintf('Order #%d date and time of creation changed from "%s" to "%s"', $order_id, $previous_datetime, $new_datetime->format('Y-m-d H:i:s'));
+                    $order->add_order_note(sprintf('Order date and time of creation changed from "%s" to "%s" by <b>%s</b>', $previous_datetime, $new_datetime->format('Y-m-d H:i:s'), $current_user_name));
                 }
 
                 // Add separator line after all changes for this order

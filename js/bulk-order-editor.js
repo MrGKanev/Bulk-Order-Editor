@@ -9,7 +9,7 @@ jQuery(document).ready(function($) {
         var customerNote = $('#customer_note').val();
         var noteType = $('#note_type').val();
         var customerId = $('#customer_id').val();
-        var orderDate = $('#order_date').val();
+        var orderDatetime = $('#order_datetime').val();
         var actionerId = $('#actioner_id').val();
 
         if (orderIds[0].trim() === '') {
@@ -44,7 +44,7 @@ jQuery(document).ready(function($) {
                 customer_note: customerNote,
                 note_type: noteType,
                 customer_id: customerId,
-                order_date: orderDate,
+                order_datetime: orderDatetime,
                 actioner_id: actionerId
             });
 
@@ -61,7 +61,7 @@ jQuery(document).ready(function($) {
                     customer_note: customerNote,
                     note_type: noteType,
                     customer_id: customerId,
-                    order_date: orderDate,
+                    order_datetime: orderDatetime,
                     actioner_id: actionerId
                 },
                 success: function(response) {
