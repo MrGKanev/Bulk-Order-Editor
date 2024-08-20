@@ -4,7 +4,7 @@
  * Plugin Name:             Bulk Order Editor
  * Plugin URI:              https://github.com/MrGKanev/Bulk-Order-Editor/
  * Description:             Bulk Order Editor is a simple plugin that allows you to change the status of multiple WooCommerce orders at once.
- * Version:                 0.0.2
+ * Version:                 0.0.3
  * Author:                  Gabriel Kanev
  * Author URI:              https://gkanev.com
  * License:                 MIT
@@ -13,8 +13,18 @@
  * WC requires at least:    6.0
  * WC tested up to:         9.1.2
  */
+
+defined('ABSPATH') || exit;
+
 if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
     define('__FP_FILE__', __FILE__);
+
+    // Declare HPOS compatibility
+    add_action('before_woocommerce_init', function () {
+        if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
+            \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+        }
+    });
 
     // Enqueue the custom JavaScript
     add_action('admin_enqueue_scripts', 'enqueue_custom_admin_script');
@@ -61,7 +71,6 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
     }
 
     // Display the custom admin page content
-    // Add a new field for promo code in the admin page form
     function order_status_editor_page_content()
     {
         $order_statuses = get_woocommerce_order_statuses();
@@ -134,9 +143,10 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         </div>
 <?php
     }
+
     // Handle AJAX request for individual order updates
     add_action('wp_ajax_update_single_order', 'handle_update_single_order_ajax');
-    // Handle AJAX request for individual order updates, including promo code
+
     function handle_update_single_order_ajax()
     {
         check_ajax_referer('bulk_order_editor_nonce', 'nonce');
@@ -156,6 +166,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             // Log the received data
             error_log('Received Data: ' . print_r($_POST, true));
 
+            // Use HPOS compatible method to get the order
             $order = wc_get_order($order_id);
             if ($order) {
                 $log_entries = [];
@@ -169,7 +180,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
                 if ($order_status && $order->get_status() !== $order_status) {
                     $previous_status = $order->get_status();
-                    $order->update_status($order_status);
+                    $order->set_status($order_status); // HPOS compatible method
                     $log_entries[] = sprintf('Order #%d status changed from "%s" to "%s"', $order_id, wc_get_order_status_name($previous_status), wc_get_order_status_name($order_status));
                     $order->add_order_note(sprintf('Order status changed from "%s" to "%s" by <b>%s</b>', wc_get_order_status_name($previous_status), wc_get_order_status_name($order_status), $current_user_name));
                 }
@@ -182,22 +193,22 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                 }
 
                 if (!empty($promo_code)) {
-                    $result = $order->apply_coupon($promo_code);
-                    if (is_wp_error($result)) {
-                        $log_entries[] = sprintf('Failed to add promo code "%s" to order #%d: %s', $promo_code, $order_id, $result->get_error_message());
-                    } else {
+                    $coupon = new WC_Coupon($promo_code);
+                    if ($coupon->get_id()) {
+                        $order->apply_coupon($coupon);
                         $log_entries[] = sprintf('Order #%d promo code added: "%s"', $order_id, $promo_code);
                         $order->add_order_note(sprintf('Promo code "%s" added by <b>%s</b>', $promo_code, $current_user_name));
+                    } else {
+                        $log_entries[] = sprintf('Failed to add promo code "%s" to order #%d: Coupon not found', $promo_code, $order_id);
                     }
                 }
 
                 if (!empty($customer_note)) {
-                    $order->add_order_note(sprintf('Note added by %s: "%s"', $current_user_name, $customer_note), $note_type === 'customer');
+                    $order->add_order_note($customer_note, $note_type === 'customer', false, $current_user_name);
                     $log_entries[] = sprintf('Order #%d note added: "%s"', $order_id, $customer_note);
                 }
 
-                if ($order_date && $order->get_date_created()->format('Y-m-d') !== $order_date
-                ) {
+                if ($order_date && $order->get_date_created()->format('Y-m-d') !== $order_date) {
                     $previous_date = $order->get_date_created()->format('Y-m-d');
                     $order->set_date_created($order_date);
                     $log_entries[] = sprintf('Order #%d date of creation changed from "%s" to "%s"', $order_id, $previous_date, $order_date);
@@ -209,7 +220,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                     $log_entries[] = "--------------------------------";
                 }
 
-                $order->save();
+                $order->save(); // HPOS compatible method to save all changes
 
                 wp_send_json_success(array(
                     'log_entries' => $log_entries,
