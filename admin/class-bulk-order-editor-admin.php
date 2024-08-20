@@ -92,7 +92,7 @@ class Bulk_Order_Editor_Admin
         if (!empty($data['order_total'])) {
             $new_total = floatval($data['order_total']);
             $current_total = floatval($order->get_total());
-            if ($current_total !== $new_total) {
+            if (abs($current_total - $new_total) > 0.01) { // Check if the difference is more than 1 cent
                 // Calculate the difference
                 $difference = $new_total - $current_total;
 
@@ -101,9 +101,10 @@ class Bulk_Order_Editor_Admin
                 $fee->set_name('Total Adjustment');
                 $fee->set_amount($difference);
                 $fee->set_total($difference);
+                $fee->set_tax_status('none');
 
                 $order->add_item($fee);
-                $order->calculate_totals();
+                $order->calculate_totals(false); // false to not recalculate taxes
 
                 $log_entries[] = sprintf('Order #%d total changed from %.2f to %.2f', $order_id, $current_total, $new_total);
                 $order->add_order_note(sprintf('Order total changed from %.2f to %.2f by <b>%s</b>', $current_total, $new_total, $current_user_name));

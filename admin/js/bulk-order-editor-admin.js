@@ -53,13 +53,16 @@ jQuery(document).ready(function($) {
         $('#progress-percentage').text(percentage + '%');
     }
 
-    function updateLog(logEntries) {
-        if (Array.isArray(logEntries)) {
-            logEntries.forEach(function(entry) {
-                $('#log-list').append('<li>' + entry + '</li>');
-            });
-        } else if (typeof logEntries === 'string') {
-            $('#log-list').append('<li>' + logEntries + '</li>');
-        }
+function updateLog(logEntries) {
+    if (Array.isArray(logEntries)) {
+        logEntries.forEach(function(entry) {
+            $('#log-list').append('<li>' + entry + '</li>');
+        });
+    } else if (typeof logEntries === 'string') {
+        $('#log-list').append('<li>' + logEntries + '</li>');
     }
+    // Scroll to the bottom of the log list
+    var logList = document.getElementById('log-list');
+    logList.scrollTop = logList.scrollHeight;
+}
 });
