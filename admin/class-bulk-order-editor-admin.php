@@ -83,8 +83,9 @@ class Bulk_Order_Editor_Admin
             if ($order->get_status() !== $new_status) {
                 $previous_status = $order->get_status();
                 $order->set_status($new_status);
-                $log_entries[] = sprintf('Order #%d status changed from "%s" to "%s"', $order_id, wc_get_order_status_name($previous_status), wc_get_order_status_name($new_status));
-                $order->add_order_note(sprintf('Order status changed from "%s" to "%s" by <b>%s</b>', wc_get_order_status_name($previous_status), wc_get_order_status_name($new_status), $current_user_name));
+                $note = sprintf('Order status changed from "%s" to "%s" by %s', wc_get_order_status_name($previous_status), wc_get_order_status_name($new_status), $current_user_name);
+                $order->add_order_note($note);
+                $log_entries[] = sprintf('Order #%d: %s', $order_id, $note);
             }
         }
 
@@ -106,8 +107,9 @@ class Bulk_Order_Editor_Admin
                 $order->add_item($fee);
                 $order->calculate_totals(false); // false to not recalculate taxes
 
-                $log_entries[] = sprintf('Order #%d total changed from %.2f to %.2f', $order_id, $current_total, $new_total);
-                $order->add_order_note(sprintf('Order total changed from %.2f to %.2f by <b>%s</b>', $current_total, $new_total, $current_user_name));
+                $note = sprintf('Order total changed from %.2f to %.2f by %s', $current_total, $new_total, $current_user_name);
+                $order->add_order_note($note);
+                $log_entries[] = sprintf('Order #%d: %s', $order_id, $note);
             }
         }
 
@@ -118,8 +120,9 @@ class Bulk_Order_Editor_Admin
             if ($coupon->get_id()) {
                 $result = $order->apply_coupon($coupon);
                 if (!is_wp_error($result)) {
-                    $log_entries[] = sprintf('Promo code "%s" applied to order #%d', $promo_code, $order_id);
-                    $order->add_order_note(sprintf('Promo code "%s" applied by <b>%s</b>', $promo_code, $current_user_name));
+                    $note = sprintf('Promo code "%s" applied by %s', $promo_code, $current_user_name);
+                    $order->add_order_note($note);
+                    $log_entries[] = sprintf('Order #%d: %s', $order_id, $note);
                 }
             }
         }
@@ -128,8 +131,16 @@ class Bulk_Order_Editor_Admin
         if (!empty($data['customer_note'])) {
             $note = sanitize_textarea_field($data['customer_note']);
             $is_customer_note = isset($data['note_type']) && $data['note_type'] === 'customer';
-            $order->add_order_note($note, $is_customer_note, false);
-            $log_entries[] = sprintf('Note added to order #%d', $order_id);
+            if ($is_customer_note) {
+                $note_type = 'Customer note';
+                $order->add_order_note($note, 1, false); // 1 for customer note
+                $log_entries[] = sprintf('Order #%d: Customer note added: "%s"', $order_id, $note);
+            } else {
+                $note_type = 'Private note';
+                $private_note = sprintf('%s (added by %s)', $note, $current_user_name);
+                $order->add_order_note($private_note, 0, false); // 0 for private note
+                $log_entries[] = sprintf('Order #%d: Private note added by %s: "%s"', $order_id, $current_user_name, $note);
+            }
         }
 
         // Process customer ID
@@ -138,8 +149,9 @@ class Bulk_Order_Editor_Admin
             $current_customer_id = $order->get_customer_id();
             if ($current_customer_id !== $new_customer_id) {
                 $order->set_customer_id($new_customer_id);
-                $log_entries[] = sprintf('Customer ID for order #%d changed from %d to %d', $order_id, $current_customer_id, $new_customer_id);
-                $order->add_order_note(sprintf('Customer ID changed from %d to %d by <b>%s</b>', $current_customer_id, $new_customer_id, $current_user_name));
+                $note = sprintf('Customer ID changed from %d to %d by %s', $current_customer_id, $new_customer_id, $current_user_name);
+                $order->add_order_note($note);
+                $log_entries[] = sprintf('Order #%d: %s', $order_id, $note);
             }
         }
 
@@ -149,8 +161,9 @@ class Bulk_Order_Editor_Admin
             $current_datetime = $order->get_date_created();
             if ($current_datetime->getTimestamp() !== $new_datetime->getTimestamp()) {
                 $order->set_date_created($new_datetime);
-                $log_entries[] = sprintf('Order #%d date changed from %s to %s', $order_id, $current_datetime->format('Y-m-d H:i:s'), $new_datetime->format('Y-m-d H:i:s'));
-                $order->add_order_note(sprintf('Order date changed from %s to %s by <b>%s</b>', $current_datetime->format('Y-m-d H:i:s'), $new_datetime->format('Y-m-d H:i:s'), $current_user_name));
+                $note = sprintf('Order date changed from %s to %s by %s', $current_datetime->format('Y-m-d H:i:s'), $new_datetime->format('Y-m-d H:i:s'), $current_user_name);
+                $order->add_order_note($note);
+                $log_entries[] = sprintf('Order #%d: %s', $order_id, $note);
             }
         }
 
