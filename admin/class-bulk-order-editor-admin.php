@@ -77,97 +77,101 @@ class Bulk_Order_Editor_Admin
         $current_user = wp_get_current_user();
         $current_user_name = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
 
-        // Process order status
-        if (!empty($data['order_status'])) {
-            $new_status = sanitize_text_field($data['order_status']);
-            if ($order->get_status() !== $new_status) {
-                $previous_status = $order->get_status();
-                $order->set_status($new_status);
-                $note = sprintf('Order status changed from "%s" to "%s" by %s', wc_get_order_status_name($previous_status), wc_get_order_status_name($new_status), $current_user_name);
-                $order->add_order_note($note);
-                $log_entries[] = sprintf('Order #%d: %s', $order_id, $note);
-            }
-        }
-
-        // Process order total
-        if (!empty($data['order_total'])) {
-            $new_total = floatval($data['order_total']);
-            $current_total = floatval($order->get_total());
-            if (abs($current_total - $new_total) > 0.01) { // Check if the difference is more than 1 cent
-                // Calculate the difference
-                $difference = $new_total - $current_total;
-
-                // Add a fee to adjust the total
-                $fee = new WC_Order_Item_Fee();
-                $fee->set_name('Total Adjustment');
-                $fee->set_amount($difference);
-                $fee->set_total($difference);
-                $fee->set_tax_status('none');
-
-                $order->add_item($fee);
-                $order->calculate_totals(false); // false to not recalculate taxes
-
-                $note = sprintf('Order total changed from %.2f to %.2f by %s', $current_total, $new_total, $current_user_name);
-                $order->add_order_note($note);
-                $log_entries[] = sprintf('Order #%d: %s', $order_id, $note);
-            }
-        }
-
-        // Process promo code
-        if (!empty($data['promo_code'])) {
-            $promo_code = sanitize_text_field($data['promo_code']);
-            $coupon = new WC_Coupon($promo_code);
-            if ($coupon->get_id()) {
-                $result = $order->apply_coupon($coupon);
-                if (!is_wp_error($result)) {
-                    $note = sprintf('Promo code "%s" applied by %s', $promo_code, $current_user_name);
+        try {
+            // Process order status
+            if (!empty($data['order_status'])) {
+                $new_status = sanitize_text_field($data['order_status']);
+                if ($order->get_status() !== $new_status) {
+                    $previous_status = $order->get_status();
+                    $order->set_status($new_status);
+                    $note = sprintf('Order status changed from "%s" to "%s" by %s', wc_get_order_status_name($previous_status), wc_get_order_status_name($new_status), $current_user_name);
                     $order->add_order_note($note);
                     $log_entries[] = sprintf('Order #%d: %s', $order_id, $note);
                 }
             }
-        }
 
-        // Process customer note
-        if (!empty($data['customer_note'])) {
-            $note = sanitize_textarea_field($data['customer_note']);
-            $is_customer_note = isset($data['note_type']) && $data['note_type'] === 'customer';
-            if ($is_customer_note) {
-                $note_type = 'Customer note';
-                $order->add_order_note($note, 1, false); // 1 for customer note
-                $log_entries[] = sprintf('Order #%d: Customer note added: "%s"', $order_id, $note);
-            } else {
-                $note_type = 'Private note';
-                $private_note = sprintf('%s (added by %s)', $note, $current_user_name);
-                $order->add_order_note($private_note, 0, false); // 0 for private note
-                $log_entries[] = sprintf('Order #%d: Private note added by %s: "%s"', $order_id, $current_user_name, $note);
+            // Process order total
+            if (!empty($data['order_total'])) {
+                $new_total = floatval($data['order_total']);
+                $current_total = floatval($order->get_total());
+                if (abs($current_total - $new_total) > 0.01) { // Check if the difference is more than 1 cent
+                    // Calculate the difference
+                    $difference = $new_total - $current_total;
+
+                    // Add a fee to adjust the total
+                    $fee = new WC_Order_Item_Fee();
+                    $fee->set_name('Total Adjustment');
+                    $fee->set_amount($difference);
+                    $fee->set_total($difference);
+                    $fee->set_tax_status('none');
+
+                    $order->add_item($fee);
+                    $order->calculate_totals(false); // false to not recalculate taxes
+
+                    $note = sprintf('Order total changed from %.2f to %.2f by %s', $current_total, $new_total, $current_user_name);
+                    $order->add_order_note($note);
+                    $log_entries[] = sprintf('Order #%d: %s', $order_id, $note);
+                }
             }
-        }
 
-        // Process customer ID
-        if (!empty($data['customer_id'])) {
-            $new_customer_id = intval($data['customer_id']);
-            $current_customer_id = $order->get_customer_id();
-            if ($current_customer_id !== $new_customer_id) {
-                $order->set_customer_id($new_customer_id);
-                $note = sprintf('Customer ID changed from %d to %d by %s', $current_customer_id, $new_customer_id, $current_user_name);
-                $order->add_order_note($note);
-                $log_entries[] = sprintf('Order #%d: %s', $order_id, $note);
+            // Process promo code
+            if (!empty($data['promo_code'])) {
+                $promo_code = sanitize_text_field($data['promo_code']);
+                $coupon = new WC_Coupon($promo_code);
+                if ($coupon->get_id()) {
+                    $result = $order->apply_coupon($coupon);
+                    if (!is_wp_error($result)) {
+                        $note = sprintf('Promo code "%s" applied by %s', $promo_code, $current_user_name);
+                        $order->add_order_note($note);
+                        $log_entries[] = sprintf('Order #%d: %s', $order_id, $note);
+                    }
+                }
             }
-        }
 
-        // Process order date
-        if (!empty($data['order_datetime'])) {
-            $new_datetime = new WC_DateTime($data['order_datetime']);
-            $current_datetime = $order->get_date_created();
-            if ($current_datetime->getTimestamp() !== $new_datetime->getTimestamp()) {
-                $order->set_date_created($new_datetime);
-                $note = sprintf('Order date changed from %s to %s by %s', $current_datetime->format('Y-m-d H:i:s'), $new_datetime->format('Y-m-d H:i:s'), $current_user_name);
-                $order->add_order_note($note);
-                $log_entries[] = sprintf('Order #%d: %s', $order_id, $note);
+            // Process customer note
+            if (!empty($data['customer_note'])) {
+                $note = sanitize_textarea_field($data['customer_note']);
+                $is_customer_note = isset($data['note_type']) && $data['note_type'] === 'customer';
+                if ($is_customer_note) {
+                    $note_type = 'Customer note';
+                    $order->add_order_note($note, 1, false); // 1 for customer note
+                    $log_entries[] = sprintf('Order #%d: Customer note added: "%s"', $order_id, $note);
+                } else {
+                    $note_type = 'Private note';
+                    $private_note = sprintf('%s (added by %s)', $note, $current_user_name);
+                    $order->add_order_note($private_note, 0, false); // 0 for private note
+                    $log_entries[] = sprintf('Order #%d: Private note added by %s: "%s"', $order_id, $current_user_name, $note);
+                }
             }
-        }
 
-        $order->save();
+            // Process customer ID
+            if (!empty($data['customer_id'])) {
+                $new_customer_id = intval($data['customer_id']);
+                $current_customer_id = $order->get_customer_id();
+                if ($current_customer_id !== $new_customer_id) {
+                    $order->set_customer_id($new_customer_id);
+                    $note = sprintf('Customer ID changed from %d to %d by %s', $current_customer_id, $new_customer_id, $current_user_name);
+                    $order->add_order_note($note);
+                    $log_entries[] = sprintf('Order #%d: %s', $order_id, $note);
+                }
+            }
+
+            // Process order date
+            if (!empty($data['order_datetime'])) {
+                $new_datetime = new WC_DateTime($data['order_datetime']);
+                $current_datetime = $order->get_date_created();
+                if ($current_datetime->getTimestamp() !== $new_datetime->getTimestamp()) {
+                    $order->set_date_created($new_datetime);
+                    $note = sprintf('Order date changed from %s to %s by %s', $current_datetime->format('Y-m-d H:i:s'), $new_datetime->format('Y-m-d H:i:s'), $current_user_name);
+                    $order->add_order_note($note);
+                    $log_entries[] = sprintf('Order #%d: %s', $order_id, $note);
+                }
+            }
+
+            $order->save();
+        } catch (Exception $e) {
+            return ['error' => sprintf('Error processing order #%d: %s', $order_id, $e->getMessage())];
+        }
 
         return ['order_id' => $order_id, 'log_entries' => $log_entries];
     }
