@@ -7,7 +7,8 @@
  * Version: 0.0.6
  * Author: Gabriel Kanev
  * Author URI: https://gkanev.com
- * License: MIT
+ * License: GPL-2.0 License
+ * Requires Plugins: woocommerce
  * Requires at least: 6.4
  * Requires PHP: 7.4
  * WC requires at least: 6.0
