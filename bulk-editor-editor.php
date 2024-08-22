@@ -12,7 +12,7 @@
  * Requires at least: 6.4
  * Requires PHP: 7.4
  * WC requires at least: 6.0
- * WC tested up to: 9.1.4
+ * WC tested up to: 9.2.1
  */
 
 defined('ABSPATH') || exit;
